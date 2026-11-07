@@ -189,6 +189,17 @@ typedef enum CUjit_option_enum {
 //                 CUDA Runtime API (from cuda_runtime_api.h)                 //
 // ========================================================================== //
 
+// Reuse the CUDA runtime declarations when compiling with nvcc.  nvcc
+// commonly preincludes cuda_runtime_api.h (including through nvcc_wrapper),
+// so redeclaring these public types is ill-formed.  Host-only compilation
+// intentionally keeps the lightweight declarations below and remains usable
+// without a CUDA SDK.
+#if defined(__CUDACC__) && defined(__has_include) && __has_include(<cuda_runtime_api.h>)
+#include <cuda_runtime_api.h>
+#define GPULITE_HAS_CUDA_RUNTIME_TYPES 1
+#endif
+
+#if !defined(GPULITE_HAS_CUDA_RUNTIME_TYPES)
 struct dim3 {
     unsigned int x, y, z;
     dim3(unsigned int vx = 1, unsigned int vy = 1, unsigned int vz = 1) : x(vx), y(vy), z(vz) {}
@@ -234,6 +245,8 @@ struct cudaPointerAttributes {
 #define cudaHostAllocPortable               0x01
 #define cudaHostAllocMapped                 0x02
 #define cudaHostAllocWriteCombined          0x04
+
+#endif
 
 // allow including `.cuh` files in the CPU code
 #if !defined(__CUDACC__) && !defined(__global__)
