@@ -1517,7 +1517,8 @@ private:
 /// launch() method that checks argument count at compile time.
 template <typename FuncType>
 class CachedKernel : public CachedKernelBase {
-    static_assert(std::is_function_v<FuncType>,
+    using FunctionType = std::remove_reference_t<FuncType>;
+    static_assert(std::is_function_v<FunctionType>,
                   "CachedKernel requires a function type (e.g. void(float*, int))");
 
 public:
@@ -1571,13 +1572,15 @@ class KernelFactory {
     /// Retrieve a previously cached kernel. FuncType must match the type used
     /// when the kernel was created.
     template <typename FuncType>
-    CachedKernel<FuncType>* getKernel(const std::string& kernel_name) {
-        static_assert(std::is_function_v<FuncType>,
+    CachedKernel<std::remove_reference_t<FuncType>>* getKernel(
+        const std::string& kernel_name) {
+        using FunctionType = std::remove_reference_t<FuncType>;
+        static_assert(std::is_function_v<FunctionType>,
                       "FuncType must be a function type (e.g. void(float*, int))");
         std::lock_guard<std::mutex> kernel_cache_lock(kernel_cache_mutex_);
         auto it = kernel_cache_.find(kernel_name);
         if (it != kernel_cache_.end()) {
-            auto* ptr = dynamic_cast<CachedKernel<FuncType>*>(it->second.get());
+            auto* ptr = dynamic_cast<CachedKernel<FunctionType>*>(it->second.get());
             if (!ptr) {
                 throw std::runtime_error(
                     "Kernel type mismatch for '" + kernel_name + "': requested type does not "
@@ -1590,30 +1593,32 @@ class KernelFactory {
     }
 
     template <typename FuncType>
-    CachedKernel<FuncType>* create(
+    CachedKernel<std::remove_reference_t<FuncType>>* create(
         const std::string& kernel_name,
         const std::string& code,
         const std::string& path,
         std::vector<std::string> options
     ) {
-        return this->create<FuncType>(kernel_name, code.c_str(), path.c_str(), std::move(options));
+        return this->create<std::remove_reference_t<FuncType>>(
+            kernel_name, code.c_str(), path.c_str(), std::move(options));
     }
 
     /// Create or retrieve a kernel from inline source. If the kernel already
     /// exists in the cache, returns the cached instance. FuncType is the
     /// function signature of the kernel (e.g. void(float*, float*, int)).
     template <typename FuncType>
-    CachedKernel<FuncType>* create(
+    CachedKernel<std::remove_reference_t<FuncType>>* create(
         const std::string& kernel_name,
         const char* code,
         const char* path,
         std::vector<std::string> options
     ) {
-        static_assert(std::is_function_v<FuncType>, "FuncType must be a function type (e.g. void(float*, int))");
+        using FunctionType = std::remove_reference_t<FuncType>;
+        static_assert(std::is_function_v<FunctionType>, "FuncType must be a function type (e.g. void(float*, int))");
         std::lock_guard<std::mutex> kernel_cache_lock(kernel_cache_mutex_);
         auto it = kernel_cache_.find(kernel_name);
         if (it != kernel_cache_.end()) {
-            auto* ptr = dynamic_cast<CachedKernel<FuncType>*>(it->second.get());
+            auto* ptr = dynamic_cast<CachedKernel<FunctionType>*>(it->second.get());
             if (!ptr) {
                 throw std::runtime_error(
                     "Kernel type mismatch for '" + kernel_name + "': requested type does not "
@@ -1623,7 +1628,7 @@ class KernelFactory {
             return ptr;
         }
 
-        auto kernel = std::make_unique<CachedKernel<FuncType>>(
+        auto kernel = std::make_unique<CachedKernel<FunctionType>>(
             kernel_name, code, path, std::move(options)
         );
         auto* ptr = kernel.get();
