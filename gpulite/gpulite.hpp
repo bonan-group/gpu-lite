@@ -63,6 +63,14 @@
 #include <cxxabi.h>
 #endif
 
+#if defined(__CUDACC__) && defined(__has_include) && __has_include(<cuda_runtime_api.h>)
+// nvcc (and wrappers such as nvcc_wrapper) already provide these public CUDA
+// runtime declarations. Include the CUDA header before the C-linkage block;
+// it contains C++ templates on newer CUDA releases.
+#include <cuda_runtime_api.h>
+#define GPULITE_HAS_CUDA_RUNTIME_TYPES 1
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -200,6 +208,7 @@ typedef enum CUjit_option_enum {
 //                 CUDA Runtime API (from cuda_runtime_api.h)                 //
 // ========================================================================== //
 
+#if !defined(GPULITE_HAS_CUDA_RUNTIME_TYPES)
 struct dim3 {
     unsigned int x, y, z;
     dim3(unsigned int vx = 1, unsigned int vy = 1, unsigned int vz = 1) : x(vx), y(vy), z(vz) {}
@@ -245,6 +254,8 @@ struct cudaPointerAttributes {
 #define cudaHostAllocPortable               0x01
 #define cudaHostAllocMapped                 0x02
 #define cudaHostAllocWriteCombined          0x04
+
+#endif
 
 // allow including `.cuh` files in the CPU code
 #if !defined(__CUDACC__) && !defined(__global__)
