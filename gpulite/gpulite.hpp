@@ -1054,7 +1054,7 @@ class NVRTC {
         ownedHandle = true;
         // check if libnvrtc is already loaded to avoid loading multiple versions
         // in the same process
-        nvrtcHandle = details::findLoadedLibrary("libnvrtc");
+        nvrtcHandle = details::findLoadedLibrary("libnvrtc.");
         if (!nvrtcHandle) {
             static const char* CANDIDATES[] = {
                 "libnvrtc.so",
